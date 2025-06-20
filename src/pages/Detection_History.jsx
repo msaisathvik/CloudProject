@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import SectionLayout from '../layouts/sectionLayout';
+import SectionLayout from '../layouts/SectionLayout';
 import CameraIcon from '../assets/icons/camera_icon.svg';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog"
 import { Supabase } from '../../Supabase';

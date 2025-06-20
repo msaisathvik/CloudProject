@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import SectionLayout from '../layouts/sectionLayout';
+import SectionLayout from '../layouts/SectionLayout';
 import { RiDeleteBin6Line, RiEdit2Line } from "react-icons/ri";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import DetectionDataContext from '@/context/DetectionDataContext';

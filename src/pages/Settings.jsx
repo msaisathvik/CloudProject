@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import SectionLayout from '../layouts/sectionLayout';
+import SectionLayout from '../layouts/SectionLayout';
 import Profile from '@/assets/images/profile.png';
 import DetectionDataContext from '@/context/DetectionDataContext';
 

@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import SectionLayout from '../layouts/sectionLayout';
+import SectionLayout from '../layouts/SectionLayout';
 import { BsCameraVideoFill } from 'react-icons/bs';
 import DetectionDataContext from '@/context/DetectionDataContext';
 import ThumbImg from '@/assets/images/cam_thumbnail.jpg';
