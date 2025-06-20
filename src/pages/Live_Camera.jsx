@@ -40,12 +40,29 @@ const Live_Camera = () => {
 
     const handleConnectStream = (cameraId, e) => {
         e.preventDefault();
-        let ip = cameraIpMap[cameraId]?.trim();
-        if (!ip) return;
+        let input = cameraIpMap[cameraId]?.trim();
+        if (!input) return;
 
-        if (!ip.startsWith("http")) ip = `http://${ip}`;
-        ip = ip.replace(/\/$/, '');
-        const streamUrl = `${ip}/video`;
+        let streamUrl = input;
+
+        // Ensure there is a protocol
+        if (!streamUrl.startsWith('http://') && !streamUrl.startsWith('https://')) {
+            streamUrl = 'http://' + streamUrl;
+        }
+
+        try {
+            const url = new URL(streamUrl);
+            // If only hostname/ip is provided (path is empty or '/'), append '/video'.
+            if (url.pathname === '/' || url.pathname === '') {
+                // remove trailing slash if any before appending
+                streamUrl = streamUrl.replace(/\/$/, '');
+                streamUrl = `${streamUrl}/video`;
+            }
+        } catch (e) {
+            // if parsing fails, it might be an invalid URL.
+            // For now, we'll let it try to connect anyway.
+            console.error("Invalid URL format:", streamUrl);
+        }
 
         setLoadingStreams(prev => ({ ...prev, [cameraId]: true }));
 
@@ -289,11 +306,11 @@ const Live_Camera = () => {
             {showModal.ipAddressFor && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                        <h2 className="text-xl font-semibold mb-4 text-center">Enter IP Address</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-center">Enter Camera Stream Address</h2>
                         <form onSubmit={(e) => handleConnectStream(showModal.ipAddressFor, e)} className="space-y-4">
                             <input
                                 type="text"
-                                placeholder="e.g. 192.168.1.10:8080"
+                                placeholder="e.g. 192.168.1.10:8080 or my-cam.com/stream"
                                 value={cameraIpMap[showModal.ipAddressFor] || ''}
                                 onChange={(e) =>
                                     setCameraIpMap(prev => ({ ...prev, [showModal.ipAddressFor]: e.target.value }))

@@ -1,0 +1,30 @@
+steps:
+  # 1. Install npm dependencies from package.json
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+
+  # 2. Build the Vite application for production.
+  # Cloud Build allows for substitutions, which we'll use to pass environment variables.
+  # You will define _VITE_SUPABASE_URL and _VITE_SUPABASE_ANON_KEY in your Cloud Build trigger settings.
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    env:
+      - 'VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}'
+      - 'VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}'
+
+  # 3. Deploy the built assets to a Google Cloud Storage bucket.
+  # The contents of the 'dist' directory will be synced with the bucket.
+  # The -m flag performs a parallel copy, -r is for recursive, -c checks checksums, and -d deletes extra files in the destination.
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args:
+      - '-m'
+      - 'rsync'
+      - '-r'
+      - '-c'
+      - '-d'
+      - './dist'
+      - 'gs://${_BUCKET_NAME}'
+
+  # 4. Make the new files in the bucket publicly readable.
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['iam', 'ch', 'allUsers:objectViewer', 'gs://${_BUCKET_NAME}'] 
