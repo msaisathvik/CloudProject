@@ -1,7 +1,7 @@
 import DetectionDataContext from "@/context/DetectionDataContext";
 import React, { useContext, useState } from "react";
 import { CiBellOn } from "react-icons/ci";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router-dom";
 
 const SectionLayout = (WrappedComponent) => {
     return ({ title, ...props }) => {
@@ -14,7 +14,7 @@ const SectionLayout = (WrappedComponent) => {
         };
 
         const removeAlert = (id) => {
-            const updatedAlerts = state.alertData.filter(alert => alert.id !== id);
+            const updatedAlerts = (state.alertData || []).filter(alert => alert.id !== id);
             dispatch({
                 type: "SET_ALERT_DATA",
                 payload: updatedAlerts
@@ -27,7 +27,7 @@ const SectionLayout = (WrappedComponent) => {
             navigate("/alerts");
         };
 
-        const alertCount = state.alertData.slice(0, 5).length;
+        const alertCount = (state.alertData || []).slice(0, 5).length;
 
         return (
             <section className="p-2 md:p-4 bg-[#F9F9F9] mb-8 relative">
@@ -48,7 +48,7 @@ const SectionLayout = (WrappedComponent) => {
                             {showDropdown && (
                                 <div className="absolute top-10 right-0 w-80 max-w-[90vw] bg-white rounded-lg shadow-lg z-[100] max-h-96 overflow-y-auto border border-gray-200">
                                     {alertCount > 0 ? (
-                                        state.alertData.slice(0, 5).map(alert => (
+                                        (state.alertData || []).slice(0, 5).map(alert => (
                                             <div
                                                 key={alert.id}
                                                 className="flex justify-between items-start gap-2 p-3 border-b hover:bg-lightPrimary cursor-pointer"

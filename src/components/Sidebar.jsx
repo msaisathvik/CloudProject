@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { Link, NavLink, redirect } from "react-router";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 // import Profile from "@/assets/images/profile.png";
-import { Supabase } from '../../Supabase'
+import { AuthService } from '../services/authService';
 import {
     FiLogOut,
     FiSettings,
@@ -9,6 +9,7 @@ import {
     FiMonitor,
     FiBarChart2,
     FiMenu,
+    FiTrendingUp,
 } from "react-icons/fi";
 import { FaHistory } from "react-icons/fa";
 import { MdClose } from "react-icons/md";
@@ -18,6 +19,7 @@ import DetectionDataContext from "@/context/DetectionDataContext";
 
 const navItems = [
     { name: "Reports", path: "/", icon: <FiBarChart2 /> },
+    { name: "Analytics", path: "/analytics", icon: <FiTrendingUp /> },
     { name: "Alert Center", path: "/alerts", icon: <FiBell /> },
     { name: "Detection History", path: "/detections", icon: <FaHistory /> },
     { name: "Live View", path: "/live", icon: <FiMonitor /> },
@@ -28,6 +30,7 @@ const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { state } = useContext(DetectionDataContext)
+    const navigate = useNavigate();
     console.log(state);
     const sidebarRef = useRef(null);
 
@@ -54,11 +57,10 @@ const Sidebar = () => {
     const handleLogout = async () => {
         try {
             setIsLoading(true);
-            const { error } = Supabase.auth.signOut()
+            const { error } = await AuthService.signOut();
             if (error) throw error;
             // Redirect to login page
-            redirect('/login');
-            // setIsLoading(false);
+            navigate('/login');
         } catch (error) {
             console.log(error);
             setIsLoading(false);

@@ -1,5 +1,5 @@
 // App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Detection_History from './pages/Detection_History';
 import Alerts from './pages/Alerts';
@@ -9,12 +9,15 @@ import Login from './auth/Login';
 import Sidebar from './components/Sidebar';
 import PrivateRoute from './components/PrivateRoute';
 import Signup from './auth/Signup';
+import DataMigration from './components/DataMigration';
+import LookerStudio from './pages/LookerStudio';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/migration" element={<DataMigration />} />
         {/* <Route path="/signup" element={<Signup />} /> */}
         <Route path="/*" element={
           <PrivateRoute>
@@ -26,6 +29,7 @@ function App() {
                   <Route path="/detections" element={<Detection_History title="Detection History" />} />
                   <Route path="/alerts" element={<Alerts title="Alerts" />} />
                   <Route path="/live" element={<Live_Camera title="Live Camera Feed" />} />
+                  <Route path="/analytics" element={<LookerStudio title="Looker Studio Analytics" />} />
                   <Route path="/settings" element={<Settings title="Settings" />} />
                 </Routes>
               </main>

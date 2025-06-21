@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { Supabase } from '../../Supabase';
+import { AuthService } from '../services/authService';
+import { StorageService } from '../services/storageService';
+import { FirestoreService } from '../services/firestoreService';
 import smartcity from '../assets/images/smartcity.jpg';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router-dom';
 import smart2 from '../assets/images/smart2.jpg';
+import { Helix } from 'ldrs/react';
+import 'ldrs/react/Helix.css';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
@@ -14,6 +18,8 @@ const Signup = () => {
         gender: '',
         avatar: null,
     });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const navigate = useNavigate();
 
@@ -27,43 +33,76 @@ const Signup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
+        setError('');
 
-        const { email, password, fullName, designation, phone, gender, avatar } = formData;
+        try {
+            const { email, password, fullName, designation, phone, gender, avatar } = formData;
 
-        // const { data, error } = await Supabase.auth.signUp({ email, password });
-        // if (error) return alert(`Signup error: ${error.message}`);
-
-        // const userId = data.user.id; // ✅ Actual Supabase UID
-        const userId = '1234567890'; // Mocked user ID for testing
-
-        if (avatar) {
-            const { error: uploadError } = await Supabase.storage
-                .from('profile')
-                .upload(`public/${userId}`, avatar);
-
-            if (uploadError) {
-                console.error(uploadError);
+            // Create user account with Firebase Auth
+            const authResult = await AuthService.signUp(email, password, fullName);
+            
+            if (authResult.error) {
+                setError(authResult.error);
                 return;
             }
 
-            const { data: publicData } = Supabase
-                .storage
-                .from('profile')
-                .getPublicUrl(`public/${userId}`);
+            const userId = authResult.user.uid;
+            let avatarUrl = null;
 
-            console.log(publicData.publicUrl);
+            // Upload avatar to Firebase Storage if provided
+            if (avatar) {
+                const uploadResult = await StorageService.uploadFile(
+                    avatar, 
+                    `profiles/${userId}/avatar_${Date.now()}.jpg`,
+                    {
+                        customMetadata: {
+                            userId: userId,
+                            type: 'profile-avatar',
+                            uploadedAt: new Date().toISOString()
+                        }
+                    }
+                );
 
-            // await Supabase.from('profiles').insert({
-            //     id: userId,
-            //     full_name: fullName,
-            //     designation,
-            //     phone_number: phone,
-            //     gender,
-            //     avatar_url: publicData.publicUrl,
-            // });
+                if (uploadResult.error) {
+                    console.error('Avatar upload error:', uploadResult.error);
+                    // Continue without avatar
+                } else {
+                    avatarUrl = uploadResult.url;
+                }
+            }
 
+            // Create user profile in Firestore
+            const profileData = {
+                id: userId,
+                full_name: fullName,
+                designation: designation || '',
+                phone_number: phone || '',
+                gender: gender || '',
+                avatar_url: avatarUrl,
+                email: email,
+                created_at: new Date(),
+                updated_at: new Date()
+            };
+
+            const profileResult = await FirestoreService.addDocument('profiles', profileData);
+            
+            if (profileResult.error) {
+                console.error('Profile creation error:', profileResult.error);
+                // User account was created but profile failed - this is not ideal
+                setError('Account created but profile setup failed. Please contact support.');
+                return;
+            }
+
+            // Success - redirect to dashboard
+            navigate('/');
+
+        } catch (error) {
+            console.error('Signup error:', error);
+            setError('An unexpected error occurred during signup');
+        } finally {
+            setIsLoading(false);
         }
-
     };
 
     return (
@@ -78,13 +117,62 @@ const Signup = () => {
             <form onSubmit={handleSubmit} className="relative z-20 bg-white/100 backdrop-blur-md p-8 rounded-2xl shadow-2xl max-w-md w-full space-y-4">
                 <h2 className="text-2xl font-bold text-center text-gray-800">Create Your Account</h2>
 
-                <input name="email" type="email" placeholder="Email" onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                <input name="password" type="password" placeholder="Password" onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                <input name="fullName" type="text" placeholder="Full Name" onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                <input name="designation" type="text" placeholder="Designation" onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
-                <input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+                {error && (
+                    <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
+                        {error}
+                    </div>
+                )}
 
-                <select name="gender" onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <input 
+                    name="email" 
+                    type="email" 
+                    placeholder="Email" 
+                    value={formData.email}
+                    onChange={handleChange} 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+                <input 
+                    name="password" 
+                    type="password" 
+                    placeholder="Password" 
+                    value={formData.password}
+                    onChange={handleChange} 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+                <input 
+                    name="fullName" 
+                    type="text" 
+                    placeholder="Full Name" 
+                    value={formData.fullName}
+                    onChange={handleChange} 
+                    required 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+                <input 
+                    name="designation" 
+                    type="text" 
+                    placeholder="Designation" 
+                    value={formData.designation}
+                    onChange={handleChange} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+                <input 
+                    name="phone" 
+                    type="tel" 
+                    placeholder="Phone Number" 
+                    value={formData.phone}
+                    onChange={handleChange} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
+
+                <select 
+                    name="gender" 
+                    value={formData.gender}
+                    onChange={handleChange} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -95,7 +183,7 @@ const Signup = () => {
                     <div className="relative w-full">
                         <label
                             htmlFor="avatar-upload"
-                            className="flex items-center justify-center px-4 py-2 border-myPrimary border border-dashed rounded-lg cursor-pointer hover: transition"
+                            className="flex items-center justify-center px-4 py-2 border-myPrimary border border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition"
                         >
                             Upload Image
                         </label>
@@ -119,9 +207,19 @@ const Signup = () => {
                     )}
                 </div>
 
-
-                <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:cursor-pointer hover:bg-blue-700 transition">
-                    Sign Up
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:cursor-pointer hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? (
+                        <div className="flex items-center justify-center">
+                            <Helix size="20" color="white" speed={1} />
+                            <span className="ml-2">Creating Account...</span>
+                        </div>
+                    ) : (
+                        'Sign Up'
+                    )}
                 </button>
 
                 <p className="text-center text-sm mt-2">

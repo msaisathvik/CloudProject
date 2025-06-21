@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import SectionLayout from '../layouts/SectionLayout';
 import CameraIcon from '../assets/icons/camera_icon.svg';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "@/components/ui/alert-dialog"
-import { Supabase } from '../../Supabase';
+import { FirestoreService } from '../services/firestoreService';
 
 import {
     Table,
@@ -36,17 +36,14 @@ const Detection_History = () => {
     const confirmDelete = async () => {
         try {
             setIsLoading(true);
-            const { error } = await Supabase
-                .from('detection_history')
-                .delete()
-                .eq('detect_id', deleteDialogOpen.id);
+            const result = await FirestoreService.deleteDocument('detection_history', deleteDialogOpen.id);
 
-            if (error) throw error;
+            if (result.error) throw new Error(result.error);
 
             // Fix here 👇
             dispatch({
                 type: "SET_DETECTION_HISTORY",
-                payload: state.detection_history.filter(item => item.detect_id !== deleteDialogOpen.id)
+                payload: (state.detection_history || []).filter(item => item.detect_id !== deleteDialogOpen.id)
             });
 
             setDeleteDialogOpen({ dialog: false, id: '' });
@@ -79,8 +76,7 @@ const Detection_History = () => {
                             <AlertDialogCancel className="hover:cursor-pointer">Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={confirmDelete}
-                                className="bg-error hover:bg-error/90 hover:cursor-pointer"
-                            >
+                                className="bg-error hover:bg-error/90 hover:cursor-pointer *:focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full p-1">
                                 Delete
                             </AlertDialogAction>
                         </AlertDialogFooter>
@@ -89,7 +85,7 @@ const Detection_History = () => {
 
                 {/* table shown */}
                 {
-                    isLoading || state.detection_history.length === 0 ? (
+                    isLoading || (state.detection_history || []).length === 0 ? (
                         <div className='flex justify-center items-center h-screen'>
                             <Helix
                                 size="45"
@@ -114,7 +110,7 @@ const Detection_History = () => {
                                 </TableHeader>
                                 <TableBody>
                                     {
-                                        state?.detection_history.sort((a, b) => new Date(b.date) - new Date(a.date)).map((item, index) => (
+                                        (state?.detection_history || []).sort((a, b) => new Date(b.date) - new Date(a.date)).map((item, index) => (
                                             <TableRow key={item.detect_id} className="hover:bg-[#1B59F8]/20 data-[state=selected]:bg-muted border-b transition-colors">
                                                 <TableCell className="text-center">{index + 1}</TableCell>
                                                 <TableCell className="text-center">{item?.detect_id}</TableCell>

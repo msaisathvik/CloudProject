@@ -1,31 +1,34 @@
 // src/hooks/useAuth.js
 import { useEffect, useState } from 'react';
-import { Supabase } from '../../Supabase';
+import { AuthService } from '../services/authService';
 
 export const useAuth = () => {
-    const [session, setSession] = useState(null);
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let mounted = true;
 
-        Supabase.auth.getSession().then(({ data: { session } }) => {
+        // Get current user
+        const currentUser = AuthService.getCurrentUser();
+        if (mounted) {
+            setUser(currentUser);
+            setLoading(false);
+        }
+
+        // Listen to auth state changes
+        const unsubscribe = AuthService.onAuthStateChange((user) => {
             if (mounted) {
-                setSession(session);
+                setUser(user);
                 setLoading(false);
             }
         });
 
-        const { data: listener } = Supabase.auth.onAuthStateChange((_event, session) => {
-            if (mounted) setSession(session);
-        });
-
         return () => {
             mounted = false;
-            listener.subscription.unsubscribe();
+            unsubscribe();
         };
     }, []);
 
-
-    return { session, loading };
+    return { user, session: user, loading };
 };

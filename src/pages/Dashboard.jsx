@@ -95,11 +95,20 @@ const Dashboard = () => {
             value: 0
         }));
 
+        if (!state.detectionData || !Array.isArray(state.detectionData)) {
+            return monthlyCounts;
+        }
+
         state.detectionData.forEach(detection => {
-            if (detection.timestamp) {
-                const date = new Date(detection.timestamp);
-                const month = date.getMonth();
-                monthlyCounts[month].value++;
+            if (detection) {
+                const timestamp = detection.timestamp || detection.createdAt;
+                if (timestamp) {
+                    const date = new Date(timestamp);
+                    const month = date.getMonth();
+                    if (monthlyCounts[month]) {
+                        monthlyCounts[month].value++;
+                    }
+                }
             }
         });
 
@@ -109,12 +118,12 @@ const Dashboard = () => {
     const chartData = getDetectionsByMonth();
 
     const Matrics_Cards_Data = [
-        { label: 'Active Cameras', value: dashboard?.activeCameras, lineChart: false },
-        { label: 'Total Accident', value: dashboard?.totalDetections, lineChart: false },
-        { label: 'Camera Uptime', value: dashboard?.cameraUptime, lineChart: false },
-        { label: 'Detection Accuracy', value: dashboard?.detectionAccuracy, lineChart: true },
-        { label: 'Success Ratio', value: dashboard.successRatio, lineChart: true },
-        { label: 'Detection Rate', value: dashboard.detectionRate, lineChart: true },
+        { label: 'Active Cameras', value: dashboard?.activeCameras || '0/0', lineChart: false },
+        { label: 'Total Accident', value: dashboard?.totalDetections || 0, lineChart: false },
+        { label: 'Camera Uptime', value: dashboard?.cameraUptime || '0 hr 0m', lineChart: false },
+        { label: 'Detection Accuracy', value: dashboard?.detectionAccuracy || '0%', lineChart: true },
+        { label: 'Success Ratio', value: dashboard?.successRatio || '0%', lineChart: true },
+        { label: 'Detection Rate', value: dashboard?.detectionRate || '+0%', lineChart: true },
     ];
 
     return (
@@ -194,29 +203,35 @@ const Dashboard = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                {['S.No', 'ID', 'Date', 'Label', 'Location', 'Camera', 'Status', 'Time'].map((head, idx) => (
+                                {['S.No', 'Type', 'Message', 'Severity', 'Camera', 'Status', 'Time'].map((head, idx) => (
                                     <TableHead key={idx} className="text-center text-[#ffffff]">{head}</TableHead>
                                 ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {state.alertData?.slice(0, 4).map((alert, index) => {
-                                const detection = alert.detections || {};
-                                const dateObj = new Date(detection.timestamp);
+                            {(state.alertData || []).slice(0, 4).map((alert, index) => {
+                                const dateObj = new Date(alert.timestamp || new Date());
                                 return (
-                                    <TableRow key={alert.id}>
+                                    <TableRow key={alert.id || index}>
                                         <TableCell className="text-center">{index + 1}</TableCell>
-                                        <TableCell className="text-center">{alert.id}</TableCell>
-                                        <TableCell className="text-center">{dateObj.toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-center capitalize">{detection.label || 'N/A'}</TableCell>
-                                        <TableCell className="text-center">{detection.location || 'Unknown'}</TableCell>
-                                        <TableCell className="text-center">{detection.camera_id || 'N/A'}</TableCell>
+                                        <TableCell className="text-center capitalize">{alert.type || 'N/A'}</TableCell>
+                                        <TableCell className="text-center text-sm">{alert.message || 'N/A'}</TableCell>
+                                        <TableCell className="text-center">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${
+                                                alert.severity === 'high' ? 'bg-red-100 text-red-800' :
+                                                alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
+                                                {alert.severity || 'N/A'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-center">{alert.camera_id || 'N/A'}</TableCell>
                                         <TableCell className="text-center">
                                             <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium">
                                                 {alert.status === 'sent'
                                                     ? <CheckCircle className="h-3 w-3 mr-1 text-mySecondary" />
                                                     : <Clock className="h-3 w-3 mr-1 text-pending" />}
-                                                {alert.status}
+                                                {alert.status || 'pending'}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-center">{dateObj.toLocaleTimeString()}</TableCell>

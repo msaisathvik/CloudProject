@@ -3,7 +3,7 @@ import SectionLayout from '../layouts/SectionLayout';
 import { BsCameraVideoFill } from 'react-icons/bs';
 import DetectionDataContext from '@/context/DetectionDataContext';
 import ThumbImg from '@/assets/images/cam_thumbnail.jpg';
-import { Supabase } from "../../Supabase";
+import { FirestoreService } from '../services/firestoreService';
 import { Helix } from 'ldrs/react'
 import 'ldrs/react/Helix.css'
 
@@ -97,8 +97,9 @@ const Live_Camera = () => {
                 status,
                 last_active_at: new Date().toISOString(),
             };
-            const { error } = await Supabase.from("cameras").insert([newCamera]);
-            if (error) throw error;
+            
+            const result = await FirestoreService.addCamera(newCamera);
+            if (result.error) throw new Error(result.error);
 
             dispatch({
                 type: "SET_CAMERAS_DATA",

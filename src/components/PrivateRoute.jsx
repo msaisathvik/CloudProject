@@ -1,6 +1,6 @@
 // src/components/PrivateRoute.jsx
 import React from 'react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Helix } from 'ldrs/react';
 import 'ldrs/react/Helix.css'

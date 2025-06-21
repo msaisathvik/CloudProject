@@ -1,5 +1,5 @@
 import { createContext, useEffect, useReducer, useMemo, useCallback } from "react";
-import { Supabase } from "../../Supabase";
+import { FirestoreService } from "../services/firestoreService";
 
 const DetectionDataContext = createContext();
 
@@ -32,35 +32,49 @@ export const DetectionDataProvider = ({ children }) => {
     const [state, dispatch] = useReducer(reducer, initialState);
 
     const fetchData = useCallback(async () => {
-        const [
-            { data: detections },
-            { data: alertsWithDetection },
-            { data: cameras },
-            { data: detectionHistory },
-        ] = await Promise.all([
-            Supabase.from("detections").select("*"),
-            Supabase.from("alerts").select(`
-      *,
-      detections: detection_id (
-        id,
-        location,
-        camera_id,
-        label,
-        confidence,
-        timestamp,
-        frame_url
-      )
-    `).order("sent_at", { ascending: false }),
-            Supabase.from("cameras").select("*"),
-            Supabase.from("detection_history").select("*"),
-        ]);
+        try {
+            console.log('Fetching data from Firestore...');
+            // Fetch data from Firestore
+            const [detectionsResult, alertsResult, camerasResult, detectionHistoryResult] = await Promise.all([
+                FirestoreService.getDetections(100), // Get last 100 detections
+                FirestoreService.getAlerts(),
+                FirestoreService.getCameras(),
+                FirestoreService.getDocuments('detection_history')
+            ]);
 
-        dispatch({ type: "SET_DETECTION_DATA", payload: detections || [] });
-        dispatch({ type: "SET_ALERT_DATA", payload: alertsWithDetection || [] });
-        dispatch({ type: "SET_CAMERAS_DATA", payload: cameras || [] });
-        dispatch({ type: "SET_DETECTION_HISTORY", payload: detectionHistory || [] });
+            console.log('Firestore fetch results:', {
+                detections: detectionsResult,
+                alerts: alertsResult,
+                cameras: camerasResult,
+                detectionHistory: detectionHistoryResult
+            });
+
+            // Handle detections
+            if (!detectionsResult.error) {
+                dispatch({ type: "SET_DETECTION_DATA", payload: detectionsResult.data || [] });
+            }
+
+            // Handle alerts (with detection references)
+            if (!alertsResult.error) {
+                const alertsWithDetection = alertsResult.data || [];
+                // Note: In Firestore, you might need to fetch detection data separately
+                // or use subcollections for better performance
+                dispatch({ type: "SET_ALERT_DATA", payload: alertsWithDetection });
+            }
+
+            // Handle cameras
+            if (!camerasResult.error) {
+                dispatch({ type: "SET_CAMERAS_DATA", payload: camerasResult.data || [] });
+            }
+
+            // Handle detection history
+            if (!detectionHistoryResult.error) {
+                dispatch({ type: "SET_DETECTION_HISTORY", payload: detectionHistoryResult.data || [] });
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
     }, []);
-
 
     useEffect(() => {
         fetchData();
@@ -76,12 +90,20 @@ export const DetectionDataProvider = ({ children }) => {
         const accurateDetections = detectionData.filter(d => d.confidence > 70).length;
         const detectionAccuracy = totalDetections ? Math.round((accurateDetections / totalDetections) * 100) : 0;
 
-        const successfulAlerts = alertData.filter(a => a.status === "sent").length; // retrieving successful alerts from detection_history table
+        const successfulAlerts = alertData.filter(a => a.status === "sent").length;
         const successRatio = alertData.length ? Math.round((successfulAlerts / alertData.length) * 100) : 0;
 
-        const accidentCases = detectionData.filter(d => d.label.toLowerCase() === "accident").length;
+        const accidentCases = detectionData.filter(d => d.label && d.label.toLowerCase() === "accident").length;
 
-        const timestamps = detectionData.map(d => new Date(d.timestamp)).sort((a, b) => a - b);
+        // Handle both timestamp and createdAt fields
+        const timestamps = detectionData
+            .map(d => {
+                const timestamp = d.timestamp || d.createdAt;
+                return timestamp ? new Date(timestamp) : null;
+            })
+            .filter(date => date !== null)
+            .sort((a, b) => a - b);
+            
         const cameraUptimeSeconds =
             timestamps.length >= 2
                 ? Math.floor((timestamps[timestamps.length - 1] - timestamps[0]) / 1000)
@@ -91,7 +113,6 @@ export const DetectionDataProvider = ({ children }) => {
         const detectionRate = `+${Math.round((detectionAccuracy + successRatio) / 2)}%`;
 
         const pendingAcknowledgments = alertData.filter(a => !a.acknowledged_at).length;
-
 
         return {
             activeCameras: `${activeCameras}/${totalCameras}`,
