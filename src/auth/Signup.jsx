@@ -37,7 +37,7 @@ const Signup = () => {
         setError('');
 
         try {
-            const { email, password, fullName, designation, phone, gender, avatar } = formData;
+        const { email, password, fullName, designation, phone, gender, avatar } = formData;
 
             // Create user account with Firebase Auth
             const authResult = await AuthService.signUp(email, password, fullName);
@@ -51,7 +51,7 @@ const Signup = () => {
             let avatarUrl = null;
 
             // Upload avatar to Firebase Storage if provided
-            if (avatar) {
+        if (avatar) {
                 const uploadResult = await StorageService.uploadFile(
                     avatar, 
                     `profiles/${userId}/avatar_${Date.now()}.jpg`,
